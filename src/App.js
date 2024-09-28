@@ -1,63 +1,76 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useEthereumWallet } from './hooks/useEthereumWallet';
+import { ethers } from 'ethers';
 
 function App() {
-    const { account, chainId, connectWallet, disconnectWallet, getBalance } = useEthereumWallet();
+    const { account, chainId, connectWallet, disconnectWallet, getBalance, switchNetwork } = useEthereumWallet();
     const [addressInput, setAddressInput] = useState('');
     const [balance, setBalance] = useState(null);
 
-    const handleAddressChange = useCallback((e) => {
-        setAddressInput(e.target.value);
-    }, []);
+    // Add this function to get the network name
+    const getNetworkName = (chainId) => {
+        switch (chainId) {
+            case '0x1':
+                return 'Ethereum Mainnet';
+            case '0xaa36a7':
+                return 'Sepolia Testnet';
+            default:
+                return 'Unknown Network';
+        }
+    };
 
-    const fetchBalance = useCallback(async () => {
-        if (addressInput) {
-            const fetchedBalance = await getBalance(addressInput);
-            setBalance(fetchedBalance);
+    const handleNetworkChange = useCallback(async (networkName) => {
+        try {
+            await switchNetwork(networkName);
+        } catch (error) {
+            console.error('Failed to switch network:', error);
+        }
+    }, [switchNetwork]);
+
+    const handleGetBalance = useCallback(async () => {
+        if (ethers.utils.isAddress(addressInput)) {
+            try {
+                const balance = await getBalance(addressInput);
+                if (balance !== null) {
+                    // The balance is already in Ether, so we can set it directly
+                    setBalance(balance);
+                } else {
+                    setBalance('Error');
+                }
+            } catch (error) {
+                console.error('Failed to get balance:', error);
+                setBalance('Error');
+            }
+        } else {
+            alert('Please enter a valid Ethereum address');
         }
     }, [addressInput, getBalance]);
 
-    useEffect(() => {
-        if (account) {
-            setAddressInput(account);
-            fetchBalance();
-        } else {
-            setBalance(null);
-        }
-    }, [account, fetchBalance]);
-
     const buttonStyle = {
-        backgroundColor: '#4CAF50',
+        padding: '10px 20px',
+        margin: '5px',
         border: 'none',
-        color: 'white',
-        padding: '15px 32px',
-        textAlign: 'center',
-        textDecoration: 'none',
-        display: 'inline-block',
-        fontSize: '16px',
-        margin: '4px 2px',
+        borderRadius: '5px',
         cursor: 'pointer',
-        borderRadius: '4px',
-        transition: 'background-color 0.3s',
+        fontSize: '16px',
+        color: 'white',
+        backgroundColor: '#4CAF50',
+    };
+
+    const cardStyle = {
+        backgroundColor: 'white',
+        borderRadius: '10px',
+        padding: '20px',
+        marginBottom: '20px',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
     };
 
     const inputStyle = {
         width: '100%',
-        padding: '12px 20px',
-        margin: '8px 0',
-        display: 'inline-block',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        boxSizing: 'border-box',
-    };
-
-    const cardStyle = {
-        boxShadow: '0 4px 8px 0 rgba(0,0,0,0.2)',
-        transition: '0.3s',
+        padding: '10px',
+        marginBottom: '10px',
         borderRadius: '5px',
-        padding: '20px',
-        marginBottom: '20px',
-        backgroundColor: '#f9f9f9',
+        border: '1px solid #ddd',
     };
 
     return (
@@ -77,28 +90,34 @@ function App() {
                 ) : (
                     <div>
                         <p><strong>Connected Account:</strong> {account}</p>
-                        <p><strong>Chain ID:</strong> {chainId}</p>
+                        <p><strong>Network:</strong> {getNetworkName(chainId)} (Chain ID: {chainId})</p>
                         <button onClick={disconnectWallet} style={{...buttonStyle, backgroundColor: '#f44336'}}>
                             Disconnect Wallet
                         </button>
+                        <div style={{ marginTop: '10px' }}>
+                            <button onClick={() => handleNetworkChange('mainnet')} style={{...buttonStyle, backgroundColor: '#2196F3'}}>
+                                Switch to Mainnet
+                            </button>
+                            <button onClick={() => handleNetworkChange('sepolia')} style={{...buttonStyle, backgroundColor: '#FF9800'}}>
+                                Switch to Sepolia
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
 
             <div style={cardStyle}>
-                <h2 style={{ color: '#333' }}>Check Balance</h2>
+                <h2>Check Balance</h2>
                 <input 
                     type="text" 
                     value={addressInput} 
-                    onChange={handleAddressChange} 
+                    onChange={(e) => setAddressInput(e.target.value)}
                     placeholder="Enter Ethereum address"
                     style={inputStyle}
                 />
-                <button onClick={fetchBalance} style={buttonStyle}>Get Balance</button>
+                <button onClick={handleGetBalance} style={buttonStyle}>Get Balance</button>
                 {balance !== null && (
-                    <p style={{ fontSize: '18px', fontWeight: 'bold', marginTop: '20px' }}>
-                        Balance: {balance.toFixed(4)} ETH
-                    </p>
+                    <p><strong>Balance:</strong> {balance} ETH</p>
                 )}
             </div>
         </div>

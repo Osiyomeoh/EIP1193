@@ -57,10 +57,62 @@ export const useEthereumWallet = () => {
         method: 'eth_getBalance',
         params: [address, 'latest'],
       });
-      return parseInt(balance, 16) / 1e18;
+      // Return the balance as a string to preserve precision
+      return (parseInt(balance, 16) / 1e18).toString();
     } catch (error) {
       console.error('Error fetching balance:', error);
       return null;
+    }
+  }, [ethereum]);
+
+  const NETWORKS = {
+    mainnet: {
+      chainId: '0x1',
+      chainName: 'Ethereum Mainnet',
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      rpcUrls: ['https://mainnet.infura.io/v3/YOUR-PROJECT-ID'],
+      blockExplorerUrls: ['https://etherscan.io'],
+    },
+    sepolia: {
+      chainId: '0xaa36a7',
+      chainName: 'Sepolia Testnet',
+      nativeCurrency: { name: 'Sepolia Ether', symbol: 'SEP', decimals: 18 },
+      rpcUrls: ['https://sepolia.infura.io/v3/YOUR-PROJECT-ID'],
+      blockExplorerUrls: ['https://sepolia.etherscan.io'],
+    },
+  };
+
+  const switchNetwork = useCallback(async (networkName) => {
+    if (!ethereum) {
+      console.error('Ethereum object not found');
+      return;
+    }
+
+    const network = NETWORKS[networkName];
+    if (!network) {
+      console.error('Invalid network name');
+      return;
+    }
+
+    try {
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: network.chainId }],
+      });
+    } catch (error) {
+      // This error code indicates that the chain has not been added to MetaMask
+      if (error.code === 4902) {
+        try {
+          await ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [network],
+          });
+        } catch (addError) {
+          console.error('Failed to add network:', addError);
+        }
+      } else {
+        console.error('Failed to switch network:', error);
+      }
     }
   }, [ethereum]);
 
@@ -70,5 +122,6 @@ export const useEthereumWallet = () => {
     connectWallet,
     disconnectWallet,
     getBalance,
+    switchNetwork,
   };
 };
