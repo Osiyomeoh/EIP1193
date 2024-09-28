@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 export const useEthereumWallet = () => {
   const [account, setAccount] = useState(null);
@@ -65,7 +65,7 @@ export const useEthereumWallet = () => {
     }
   }, [ethereum]);
 
-  const NETWORKS = {
+  const NETWORKS = useMemo(() => ({
     mainnet: {
       chainId: '0x1',
       chainName: 'Ethereum Mainnet',
@@ -80,7 +80,7 @@ export const useEthereumWallet = () => {
       rpcUrls: ['https://sepolia.infura.io/v3/YOUR-PROJECT-ID'],
       blockExplorerUrls: ['https://sepolia.etherscan.io'],
     },
-  };
+  }), []); // Empty dependency array as NETWORKS is constant
 
   const switchNetwork = useCallback(async (networkName) => {
     if (!ethereum) {
