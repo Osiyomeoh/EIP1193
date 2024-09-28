@@ -114,7 +114,7 @@ export const useEthereumWallet = () => {
         console.error('Failed to switch network:', error);
       }
     }
-  }, [ethereum]);
+  }, [ethereum, NETWORKS]);
 
   return {
     account,
