@@ -16,8 +16,8 @@ function App() {
     const [addressInput, setAddressInput] = useState('');
     const [balance, setBalance] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [error, setError] = useState(null);
 
-    // Add this function to get the network name
     const getNetworkName = (chainId) => {
         switch (chainId) {
             case '0x1':
@@ -36,26 +36,30 @@ function App() {
     const handleConnect = async () => {
         try {
             await connectWallet();
-            // The isConnected state will be updated by the useEffect hook
+            setError(null);
         } catch (error) {
             console.error('Failed to connect:', error);
+            setError('Failed to connect wallet. Please try again.');
         }
     };
 
     const handleDisconnect = async () => {
         try {
             await disconnectWallet();
-            // The isConnected state will be updated by the useEffect hook
+            setError(null);
         } catch (error) {
             console.error('Failed to disconnect:', error);
+            setError('Failed to disconnect wallet. Please try again.');
         }
     };
 
     const handleNetworkChange = useCallback(async (networkName) => {
         try {
             await switchNetwork(networkName);
+            setError(null);
         } catch (error) {
             console.error('Failed to switch network:', error);
+            setError(`Failed to switch to ${networkName}. Please try again.`);
         }
     }, [switchNetwork]);
 
@@ -64,17 +68,19 @@ function App() {
             try {
                 const balance = await getBalance(addressInput);
                 if (balance !== null) {
-                    // The balance is already in Ether, so we can set it directly
-                    setBalance(balance);
+                    setBalance(ethers.utils.formatEther(balance));
+                    setError(null);
                 } else {
-                    setBalance('Error');
+                    setBalance(null);
+                    setError('Failed to fetch balance. Please try again.');
                 }
             } catch (error) {
                 console.error('Failed to get balance:', error);
-                setBalance('Error');
+                setBalance(null);
+                setError('An error occurred while fetching the balance.');
             }
         } else {
-            alert('Please enter a valid Ethereum address');
+            setError('Please enter a valid Ethereum address');
         }
     }, [addressInput, getBalance]);
 
@@ -115,6 +121,12 @@ function App() {
             minHeight: '100vh',
         }}>
             <h1 style={{ textAlign: 'center', color: '#333' }}>Ethereum Wallet Connection</h1>
+            
+            {error && (
+                <div style={{...cardStyle, backgroundColor: '#ffcccb', color: '#d8000c'}}>
+                    <p>{error}</p>
+                </div>
+            )}
             
             <div style={cardStyle}>
                 {!isConnected ? (

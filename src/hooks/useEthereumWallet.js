@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react';
 
-export const useEthereumWallet = () => {
+
+const EthereumWalletContext = createContext();
+
+export const EthereumWalletProvider = ({ children }) => {
   const [account, setAccount] = useState(null);
   const [chainId, setChainId] = useState(null);
   const [ethereum, setEthereum] = useState(null);
@@ -35,7 +38,6 @@ export const useEthereumWallet = () => {
     setAccount(null);
     setChainId(null);
     setIsDisconnected(true);
-    // Note: We're not setting ethereum to null anymore
     console.log('Wallet disconnected');
   }, []);
 
@@ -79,7 +81,6 @@ export const useEthereumWallet = () => {
         method: 'eth_getBalance',
         params: [address, 'latest'],
       });
-      // Return the balance as a string to preserve precision
       return (parseInt(balance, 16) / 1e18).toString();
     } catch (error) {
       console.error('Error fetching balance:', error);
@@ -102,7 +103,7 @@ export const useEthereumWallet = () => {
       rpcUrls: ['https://sepolia.infura.io/v3/YOUR-PROJECT-ID'],
       blockExplorerUrls: ['https://sepolia.etherscan.io'],
     },
-  }), []); // Empty dependency array as NETWORKS is constant
+  }), []); 
 
   const switchNetwork = useCallback(async (networkName) => {
     if (!ethereum) {
@@ -122,7 +123,7 @@ export const useEthereumWallet = () => {
         params: [{ chainId: network.chainId }],
       });
     } catch (error) {
-      // This error code indicates that the chain has not been added to MetaMask
+      
       if (error.code === 4902) {
         try {
           await ethereum.request({
@@ -138,7 +139,7 @@ export const useEthereumWallet = () => {
     }
   }, [ethereum, NETWORKS]);
 
-  return {
+  const value = {
     account,
     chainId,
     connectWallet,
@@ -147,4 +148,19 @@ export const useEthereumWallet = () => {
     switchNetwork,
     isDisconnected,
   };
+
+  return (
+    <EthereumWalletContext.Provider value={value}>
+      {children}
+    </EthereumWalletContext.Provider>
+  );
+};
+
+
+export const useEthereumWallet = () => {
+  const context = useContext(EthereumWalletContext);
+  if (context === undefined) {
+    throw new Error('useEthereumWallet must be used within an EthereumWalletProvider');
+  }
+  return context;
 };
