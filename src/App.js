@@ -1,11 +1,21 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useEthereumWallet } from './hooks/useEthereumWallet';
 import { ethers } from 'ethers';
 
 function App() {
-    const { account, chainId, connectWallet, disconnectWallet, getBalance, switchNetwork } = useEthereumWallet();
+    const { 
+        account, 
+        chainId, 
+        connectWallet, 
+        disconnectWallet, 
+        getBalance, 
+        switchNetwork, 
+        isDisconnected 
+    } = useEthereumWallet();
+
     const [addressInput, setAddressInput] = useState('');
     const [balance, setBalance] = useState(null);
+    const [isConnected, setIsConnected] = useState(false);
 
     // Add this function to get the network name
     const getNetworkName = (chainId) => {
@@ -16,6 +26,28 @@ function App() {
                 return 'Sepolia Testnet';
             default:
                 return 'Unknown Network';
+        }
+    };
+
+    useEffect(() => {
+        setIsConnected(!!account && !isDisconnected);
+    }, [account, isDisconnected]);
+
+    const handleConnect = async () => {
+        try {
+            await connectWallet();
+            // The isConnected state will be updated by the useEffect hook
+        } catch (error) {
+            console.error('Failed to connect:', error);
+        }
+    };
+
+    const handleDisconnect = async () => {
+        try {
+            await disconnectWallet();
+            // The isConnected state will be updated by the useEffect hook
+        } catch (error) {
+            console.error('Failed to disconnect:', error);
         }
     };
 
@@ -85,13 +117,13 @@ function App() {
             <h1 style={{ textAlign: 'center', color: '#333' }}>Ethereum Wallet Connection</h1>
             
             <div style={cardStyle}>
-                {!account ? (
-                    <button onClick={connectWallet} style={buttonStyle}>Connect Wallet</button>
+                {!isConnected ? (
+                    <button onClick={handleConnect} style={buttonStyle}>Connect Wallet</button>
                 ) : (
                     <div>
                         <p><strong>Connected Account:</strong> {account}</p>
                         <p><strong>Network:</strong> {getNetworkName(chainId)} (Chain ID: {chainId})</p>
-                        <button onClick={disconnectWallet} style={{...buttonStyle, backgroundColor: '#f44336'}}>
+                        <button onClick={handleDisconnect} style={{...buttonStyle, backgroundColor: '#f44336'}}>
                             Disconnect Wallet
                         </button>
                         <div style={{ marginTop: '10px' }}>

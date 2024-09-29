@@ -4,21 +4,39 @@ export const useEthereumWallet = () => {
   const [account, setAccount] = useState(null);
   const [chainId, setChainId] = useState(null);
   const [ethereum, setEthereum] = useState(null);
+  const [isDisconnected, setIsDisconnected] = useState(false);
 
   const connectWallet = useCallback(async () => {
-    if (ethereum) {
+    console.log('Attempting to connect wallet...');
+    if (window.ethereum) {
       try {
-        await ethereum.request({ method: 'eth_requestAccounts' });
+        console.log('Ethereum object found, requesting accounts...');
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        console.log('Accounts received:', accounts);
+        if (accounts.length > 0) {
+          setAccount(accounts[0]);
+          setIsDisconnected(false);
+          console.log('Wallet connected successfully');
+        } else {
+          console.log('No accounts received');
+        }
       } catch (error) {
         console.error('Failed to connect wallet:', error);
+        if (error.code === 4001) {
+          console.log('User rejected the connection request');
+        }
       }
     } else {
-      console.error('Ethereum object not found');
+      console.error('Ethereum object not found. Make sure you have MetaMask installed!');
     }
-  }, [ethereum]);
+  }, []);
 
-  const disconnectWallet = useCallback(() => {
+  const disconnectWallet = useCallback(async () => {
     setAccount(null);
+    setChainId(null);
+    setIsDisconnected(true);
+    // Note: We're not setting ethereum to null anymore
+    console.log('Wallet disconnected');
   }, []);
 
   const handleAccountsChanged = useCallback((accounts) => {
@@ -27,6 +45,7 @@ export const useEthereumWallet = () => {
       setAccount(null);
     } else if (accounts[0] !== account) {
       setAccount(accounts[0]);
+      setIsDisconnected(false);
     }
   }, [account]);
 
@@ -35,7 +54,9 @@ export const useEthereumWallet = () => {
   }, []);
 
   useEffect(() => {
-    if (window.ethereum) {
+    console.log('useEffect running. isDisconnected:', isDisconnected);
+    if (window.ethereum && !isDisconnected) {
+      console.log('Setting up Ethereum listeners');
       setEthereum(window.ethereum);
       window.ethereum.request({ method: 'eth_accounts' }).then(handleAccountsChanged);
       window.ethereum.request({ method: 'eth_chainId' }).then(handleChainChanged);
@@ -44,11 +65,12 @@ export const useEthereumWallet = () => {
       window.ethereum.on('chainChanged', handleChainChanged);
 
       return () => {
+        console.log('Cleaning up Ethereum listeners');
         window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
         window.ethereum.removeListener('chainChanged', handleChainChanged);
       };
     }
-  }, [handleAccountsChanged, handleChainChanged]);
+  }, [handleAccountsChanged, handleChainChanged, isDisconnected]);
 
   const getBalance = useCallback(async (address) => {
     if (!ethereum) return null;
@@ -123,5 +145,6 @@ export const useEthereumWallet = () => {
     disconnectWallet,
     getBalance,
     switchNetwork,
+    isDisconnected,
   };
 };
