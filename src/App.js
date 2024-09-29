@@ -68,7 +68,7 @@ function App() {
             try {
                 const balance = await getBalance(addressInput);
                 if (balance !== null) {
-                    setBalance(ethers.utils.formatEther(balance));
+                    setBalance((balance));
                     setError(null);
                 } else {
                     setBalance(null);
